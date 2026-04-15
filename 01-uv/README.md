@@ -101,6 +101,39 @@ Add-Content -Path $PROFILE -Value '(& uv generate-shell-completion powershell) |
 
 ---
 
+### 2.5 uv는 어디에 설치되나요? (Under the Hood)
+
+초보자들이 가장 헷갈려 하는 것이 "파이썬이 도대체 어디에 깔린 거야?"입니다. uv는 아래 경로에 모든 것을 체계적으로 정리합니다.
+
+#### uv 실행 파일 자체
+
+| OS | 경로 |
+|----|------|
+| Windows | `%USERPROFILE%\.local\bin\uv.exe` |
+| macOS/Linux | `~/.local/bin/uv` |
+
+#### uv가 자동 다운로드한 Python 버전 저장소 (`uv python install`)
+
+| OS | 경로 |
+|----|------|
+| Windows | `%LOCALAPPDATA%\uv\python\` |
+| macOS | `~/Library/Application Support/uv/python/` |
+| Linux | `~/.local/share/uv/python/` |
+
+> 💡 컴퓨터에 Python이 없어도, uv가 필요한 버전을 알아서 여기로 다운받아 사용합니다.
+
+#### `uvx` / `uv tool install`로 설치한 도구 저장소
+
+| OS | 경로 |
+|----|------|
+| Windows | `%LOCALAPPDATA%\uv\tools\` |
+| macOS | `~/Library/Application Support/uv/tools/` |
+| Linux | `~/.local/share/uv/tools/` |
+
+> 💡 Git Repo를 도구처럼 설치할 때, 그 소스코드와 전용 가상환경이 **격리되어** 저장됩니다. 다른 프로젝트와 충돌할 위험이 0%입니다.
+
+---
+
 ### 3. Python 버전 관리
 
 uv는 Python 버전 설치 및 관리를 내장하고 있어, `pyenv`가 더 이상 필요하지 않습니다.
@@ -262,6 +295,30 @@ uv lock --upgrade
 
 > ⚠️ **주의**: `uv.lock` 파일을 직접 수정하지 마세요. 항상 `uv add`, `uv remove`, `uv lock` 명령어를 사용하세요.
 
+#### 📌 `pyproject.toml` vs `uv.lock` — 왜 두 개가 모두 필요한가?
+
+이 두 파일은 짝꿍입니다. 하나만 있어서는 완벽한 패키징이 불가능합니다.
+
+**`pyproject.toml`** = **"건축 설계도"** (사람을 위한 파일)
+- 넓고 유연한 버전 지정: `"fastapi>=0.115.0"` (0.115 이상이면 OK)
+- 직접 추가한 패키지만 기록 (하위 의존성은 기록 안 함)
+- 사람이 읽고 수정하는 파일
+
+**`uv.lock`** = **"최종 결제 영수증"** (컴퓨터를 위한 파일)
+- 소수점까지 정확하게 고정: `"fastapi==0.115.2"`, `"starlette==0.41.0"`, ...
+- 꼬리에 꼬리를 무는 모든 하위 패키지의 정확한 버전 + 해시값 기록
+- **절대 직접 수정하면 안 됨** — uv가 알아서 갱신
+
+| 구분 | `pyproject.toml` (설계도) | `uv.lock` (영수증) |
+|------|--------------------------|--------------------|
+| **누가 읽나요?** | 사람과 도구(uv) 모두 | 오직 도구(uv)만 |
+| **직접 수정해도 되나요?** | ⭕ 네 | ❌ 절대 안 됨 |
+| **버전 지정 방식** | 유연함 (`>=2.0`) | 엄격함 (`==2.31.0`) |
+| **하위 패키지 기록** | 기록 안 함 | 모든 패키지를 100% 기록 |
+| **주요 역할** | 프로젝트의 세팅과 필요 조건 정의 | 언제 어디서든 똑같은 환경을 재현 |
+
+> 💡 **비유**: `pyproject.toml`에 "FastAPI 0.100 이상"이라고만 적어두면, 1년 뒤 신입사원이 최신 0.150을 설치하여 코드가 깨질 수 있습니다. 하지만 `uv.lock`이 Git에 함께 있다면, `uv sync` 한 번으로 **내가 검증했던 바로 그 버전 조합**을 그대로 복원합니다. **시간이 지나도 코드가 절대 망가지지 않는 타임캡슐**입니다.
+
 #### 4.5 스크립트 실행
 
 ```bash
@@ -300,18 +357,50 @@ source .venv/bin/activate      # macOS/Linux
 
 > 💡 **팁**: `uv run` 명령어를 사용하면 가상 환경을 직접 활성화할 필요가 없습니다. `uv run`이 자동으로 가상 환경 안에서 실행해줍니다.
 
+#### 5.1 헷갈리는 3대장 완벽 정리: `uv venv` vs `uv add` vs `uv sync`
+
+이 세 명령어는 모두 `.venv`를 건드려서 비슷해 보이지만, 역할이 완전히 다릅니다.
+
+**`uv venv`** = **"빈 주방(무균실)을 짓는다"**
+- 파이썬 실행 파일만 연결된 **텅 빈 공간**을 만듭니다
+- 패키지를 설치하지는 않습니다
+- 프로젝트를 처음 시작하거나, `.venv`가 꼬여서 처음부터 다시 만들고 싶을 때
+- ※ 최신 uv는 `uv add`나 `uv sync`를 치면 자동으로 `.venv`를 만들어주므로, 직접 칠 일이 점점 줄어드는 명령어입니다
+
+**`uv add`** = **"새 식재료를 도입하고, 레시피에 기록한다"**
+- **내가 주도적으로** 새로운 패키지를 추가할 때 사용
+- `.venv`에 설치하고, `pyproject.toml`에 기록하고, `uv.lock`을 갱신하는 3가지를 **동시에** 수행
+- `pip install`과의 차이: pip은 설치만 하고 기록은 개발자가 잊을 수 있음. `uv add`는 **설치와 기록을 강제**하여 실수를 원천 차단
+
+**`uv sync`** = **"주방을 영수증과 100% 똑같이 맞춘다"**
+- `uv.lock`(영수증)을 읽고, 현재 `.venv` 상태를 **토씨 하나 안 틀리고 똑같이** 맞춤
+- 부족한 패키지는 설치, 필요 없는 패키지는 **가차 없이 삭제**
+- Git에서 `pull` 받은 후, 또는 프로젝트를 처음 `clone`한 후 치는 **"마법의 버튼"**
+- 이 명령어 덕분에 팀원 10명이 언제나 **100% 똑같은 패키지 상태**를 유지할 수 있습니다
+
+> 💡 **한 줄 요약**: `uv venv`는 빈 집을 짓고, `uv add`는 가구를 사서 넣으며, `uv sync`는 설계도대로 집을 복원합니다.
+
 ---
 
 ### 6. CLI 도구 관리
 
 uv는 `pipx`를 대체하여 Python CLI 도구를 관리할 수 있습니다.
 
+#### 6.1 일회성 실행 (`uvx`)
+
+설치조차 하기 싫고 딱 한 번만 실행하고 싶을 때:
+
 ```bash
-# 도구를 설치하지 않고 일회성 실행
 uvx ruff check .
 uvx black --check .
+```
 
-# 도구 전역 설치
+> 💡 `uvx`는 `uv tool run`의 단축 명령어입니다. 임시 공간에 다운받아 실행 후 정리합니다.
+
+#### 6.2 전역 설치 (`uv tool install`)
+
+```bash
+# PyPI에서 도구 전역 설치
 uv tool install ruff
 uv tool install black
 
@@ -323,7 +412,29 @@ uv tool upgrade ruff
 uv tool upgrade --all
 ```
 
-> 💡 `uvx`는 `uv tool run`의 단축 명령어입니다.
+#### 6.3 Git Repo를 도구로 설치하기 (사내 CLI 배포) ⭐
+
+사내에서 만든 CLI 도구를 Git 저장소에서 직접 설치할 수 있습니다:
+
+```bash
+# Git 저장소에서 CLI 도구 설치
+uv tool install git+https://github.com/my-org/my-cli-repo.git
+
+# 특정 브랜치 또는 태그
+uv tool install git+https://github.com/my-org/my-cli-repo.git@v1.0.0
+uv tool install git+https://github.com/my-org/my-cli-repo.git@main
+
+# 설치 후 — 터미널 어디서든 실행 가능!
+my-cli-tool --help
+```
+
+**동작 원리:**
+1. uv가 `~/.local/share/uv/tools/` (Linux) 경로에 해당 Git Repo만을 위한 **격리된 전용 가상환경**을 생성합니다
+2. 해당 Repo의 `pyproject.toml`에 정의된 `[project.scripts]` 엔트리포인트를 읽습니다
+3. 해당 명령어를 `~/.local/bin/`에 심볼릭 링크하여 터미널 어디서든 사용 가능하게 합니다
+4. 다른 프로젝트/도구와 **절대 충돌하지 않습니다** (완전 격리)
+
+> 💡 이 기능은 사내 CLI 도구를 배포할 때 매우 유용합니다. 개발자들은 `uv tool install git+https://github.com/company/tool.git` 한 줄이면 도구를 바로 사용할 수 있습니다.
 
 ---
 
