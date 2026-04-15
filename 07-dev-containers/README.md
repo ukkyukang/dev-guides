@@ -210,4 +210,4 @@ uv run python -c "import streamlit; print(streamlit.__version__)"
 
 ## ⏭️ 다음 강의
 
-🎉 축하합니다! 모든 강의를 완료했습니다. [메인 페이지로 돌아가기 →](../README.md)
+[08. Git — 초보자를 위한 실전 가이드 →](../08-git/README.md)
