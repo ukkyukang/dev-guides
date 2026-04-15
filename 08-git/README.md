@@ -122,9 +122,9 @@ Git은 **파일의 변경 이력을 추적하는 분산 버전 관리 시스템*
 
 ```mermaid
 flowchart LR
-    A["Working Dir<br>(작업 디렉토리)<br><br>파일 수정"]
-    B["Staging Area<br>(스테이징)<br><br>커밋할 파일"]
-    C["Repository<br>(저장소)<br><br>커밋 이력"]
+    A["Working Dir<br/>(작업 디렉토리)<br/><br/>파일 수정"]
+    B["Staging Area<br/>(스테이징)<br/><br/>커밋할 파일"]
+    C["Repository<br/>(저장소)<br/><br/>커밋 이력"]
 
     A -- "git add" --> B
     B -- "git restore --staged" --> A
@@ -166,34 +166,16 @@ git config --list
 
 ```mermaid
 flowchart TD
-    subgraph S1 [1. 프로젝트 시작]
-        A["git init<br>git add .<br>git commit -m 'Initial commit'<br>git push origin main"]
-    end
+    S1["1. 프로젝트 시작<br/>git init<br/>git add .<br/>git commit -m 'Initial commit'<br/>git push origin main"]
+    S2["2. 개발 브랜치 생성<br/>git checkout -b dev<br/>git push origin dev"]
+    S3["3. 기능 개발 (반복)<br/>git checkout -b feature/login<br/>...코드 작성...<br/>git add .<br/>git commit -m 'feat: ...'<br/>git push origin feature/login"]
+    S4["4. 머지 (PR)<br/>feature/login을 dev에 머지"]
+    S5["5. 릴리스<br/>git checkout main<br/>git merge dev<br/>git push origin main"]
+    S6["6. 태그 달기<br/>git tag -a v1.0.0 -m 'v1.0.0'<br/>git push origin --tags"]
 
-    subgraph S2 [2. 개발 브랜치 생성]
-        B["git checkout -b dev<br>git push origin dev"]
-    end
-
-    subgraph S3 [3. 기능 개발-반복]
-        C["git checkout -b feature/login dev<br>...코드 작성...<br>git add .<br>git commit -m 'feat: ...'<br>git push origin feature/login"]
-    end
-
-    subgraph S4 [4. 머지]
-        D["feature/login → dev 머지<br>(PR 또는 로컬 merge)"]
-    end
-
-    subgraph S5 [5. 릴리스]
-        E["git checkout main<br>git merge dev<br>git push origin main"]
-    end
-
-    subgraph S6 [6. 태그 달기]
-        F["git tag -a v1.0.0 -m 'v1.0.0'<br>git push origin --tags"]
-    end
-
-    S1 --> S2
-    S2 --> S3
+    S1 --> S2 --> S3
     S3 --> S4
-    S4 -.->|새로운 기능 개발 시| S3
+    S4 -.->|새 기능 추가 시 다시 반복| S3
     S4 --> S5
     S5 --> S6
 ```
@@ -213,23 +195,25 @@ gitGraph
     checkout dev
     commit
     commit
-    branch feature/login
-    checkout feature/login
+    branch feature-login
+    checkout feature-login
     commit
     commit
     checkout dev
-    merge feature/login
-    branch feature/signup
-    checkout feature/signup
+    merge feature-login
+    branch feature-signup
+    checkout feature-signup
     commit
     checkout dev
-    merge feature/signup
+    merge feature-signup
     checkout main
-    merge dev tag: "v1.0.0"
+    merge dev
+    commit tag: "v1.0.0"
     checkout dev
     commit
     checkout main
-    merge dev tag: "v1.1.0"
+    merge dev
+    commit tag: "v1.1.0"
 ```
 
 ---
