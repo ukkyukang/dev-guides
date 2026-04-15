@@ -3,6 +3,48 @@
 > Windows에서 Linux 개발 환경을 구축하는 WSL, 컨테이너 기술의 핵심인 Docker,  
 > 그리고 사설 Docker Registry 구축까지 다룹니다.
 
+
+<!-- TOC -->
+## 📑 목차
+
+- [📋 사전 요구사항](#사전-요구사항)
+- [🎯 학습 목표](#학습-목표)
+- [📖 본문](#본문)
+  - [1. WSL2 (Windows Subsystem for Linux)](#1-wsl2-windows-subsystem-for-linux)
+    - [1.1 WSL2란?](#11-wsl2란)
+    - [1.2 WSL2 설치](#12-wsl2-설치)
+    - [1.3 WSL2 개발 환경 설정](#13-wsl2-개발-환경-설정)
+    - [1.4 WSL2 파일 시스템 주의사항](#14-wsl2-파일-시스템-주의사항)
+    - [1.5 VS Code + WSL 연동](#15-vs-code-wsl-연동)
+  - [2. Docker 핵심 개념](#2-docker-핵심-개념)
+    - [2.1 Docker란?](#21-docker란)
+    - [2.2 핵심 용어](#22-핵심-용어)
+    - [2.3 이미지 레이어 구조](#23-이미지-레이어-구조)
+  - [3. Docker 설치](#3-docker-설치)
+    - [Windows (WSL2 기반)](#windows-wsl2-기반)
+    - [macOS](#macos)
+    - [Linux (Ubuntu)](#linux-ubuntu)
+  - [4. Docker 기본 명령어](#4-docker-기본-명령어)
+    - [4.1 이미지 관리](#41-이미지-관리)
+    - [4.2 컨테이너 실행](#42-컨테이너-실행)
+    - [4.3 컨테이너 관리](#43-컨테이너-관리)
+    - [4.4 명령어 요약 치트시트](#44-명령어-요약-치트시트)
+  - [5. 사설 Docker Registry](#5-사설-docker-registry)
+    - [5.1 왜 사설 Registry가 필요한가?](#51-왜-사설-registry가-필요한가)
+    - [5.2 간단한 Registry 구축 (Docker 공식 이미지)](#52-간단한-registry-구축-docker-공식-이미지)
+    - [5.3 프로덕션 Registry 옵션](#53-프로덕션-registry-옵션)
+- [❓ 자주 묻는 질문 (FAQ)](#자주-묻는-질문-faq)
+  - [Q1: WSL2와 Docker Desktop은 꼭 함께 써야 하나요?](#q1-wsl2와-docker-desktop은-꼭-함께-써야-하나요)
+  - [Q2: `docker run`과 `docker exec`의 차이는?](#q2-docker-run과-docker-exec의-차이는)
+  - [Q3: 볼륨(`-v`)과 바인드 마운트의 차이는?](#q3-볼륨-v과-바인드-마운트의-차이는)
+  - [Q4: Docker 이미지 크기를 줄이려면?](#q4-docker-이미지-크기를-줄이려면)
+  - [Q5: `docker system prune`은 안전한가요?](#q5-docker-system-prune은-안전한가요)
+- [🏗️ 예제 프로젝트](#예제-프로젝트)
+- [🔗 참고 자료](#참고-자료)
+- [⏭️ 다음 강의](#다음-강의)
+
+<!-- /TOC -->
+
 ---
 
 ## 📋 사전 요구사항
