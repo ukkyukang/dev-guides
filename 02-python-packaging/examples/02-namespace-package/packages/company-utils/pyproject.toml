@@ -1,0 +1,14 @@
+[project]
+name = "company-utils"
+version = "1.0.0"
+description = "Company 공통 유틸리티"
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# 핵심: company-core와 동일하게 네임스페이스 루트를 지정
+[tool.hatch.build.targets.wheel]
+packages = ["src/company"]

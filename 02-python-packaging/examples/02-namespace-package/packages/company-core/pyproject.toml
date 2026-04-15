@@ -1,0 +1,16 @@
+[project]
+name = "company-core"
+version = "1.0.0"
+description = "Company 핵심 데이터 모델"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# 핵심: 네임스페이스 루트(company)를 패키지로 지정
+[tool.hatch.build.targets.wheel]
+packages = ["src/company"]

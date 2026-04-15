@@ -1,0 +1,9 @@
+[project]
+name = "my-monorepo"
+version = "0.1.0"
+description = "uv workspace 모노레포 예제"
+readme = "README.md"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = ["packages/*"]

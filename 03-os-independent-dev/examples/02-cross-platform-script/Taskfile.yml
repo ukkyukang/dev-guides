@@ -1,0 +1,46 @@
+# Taskfile.yml — 크로스 플랫폼 작업 자동화
+# https://taskfile.dev/
+#
+# 설치: https://taskfile.dev/installation/
+# 사용: task test, task lint, task check
+version: '3'
+
+vars:
+  PYTHON: "uv run python"
+
+tasks:
+  default:
+    desc: "사용 가능한 작업 목록 표시"
+    cmds:
+      - task --list
+
+  test:
+    desc: "테스트 실행"
+    cmds:
+      - "{{.PYTHON}} -m pytest -v"
+
+  lint:
+    desc: "코드 린트 검사"
+    cmds:
+      - "{{.PYTHON}} -m ruff check src/"
+
+  format:
+    desc: "코드 포맷팅"
+    cmds:
+      - "{{.PYTHON}} -m ruff format src/"
+
+  check:
+    desc: "린트 + 테스트 전체 검사"
+    deps: [lint]
+    cmds:
+      - task: test
+
+  clean:
+    desc: "캐시 및 임시 파일 정리"
+    cmds:
+      - "{{.PYTHON}} dev.py clean"
+
+  info:
+    desc: "시스템 정보 출력"
+    cmds:
+      - "{{.PYTHON}} dev.py info"

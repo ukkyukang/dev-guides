@@ -1,0 +1,8 @@
+[project]
+name = "namespace-example"
+version = "0.1.0"
+description = "네임스페이스 패키지 예제 워크스페이스"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = ["packages/*"]
