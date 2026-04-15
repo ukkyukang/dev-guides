@@ -436,6 +436,38 @@ my-cli-tool --help
 
 > 💡 이 기능은 사내 CLI 도구를 배포할 때 매우 유용합니다. 개발자들은 `uv tool install git+https://github.com/company/tool.git` 한 줄이면 도구를 바로 사용할 수 있습니다.
 
+#### 6.4 CLI 도구 명령어 비교표
+
+| 명령어 | 설치 | 실행 | 용도 |
+|--------|------|------|------|
+| `uvx ruff` | ❌ 임시 다운로드 | ✅ 즉시 실행 후 정리 | 딱 한 번만 쓸 도구 |
+| `uv tool install ruff` | ✅ 영구 설치 | ✅ 이후 `ruff`로 바로 실행 | 자주 쓰는 도구 |
+| `uv tool upgrade ruff` | — (이미 설치됨) | — | 설치된 도구를 최신 버전으로 갱신 |
+| `uv tool upgrade --all` | — (이미 설치됨) | — | **모든** 설치된 도구를 한번에 갱신 |
+| `uv tool uninstall ruff` | ❌ 삭제 | — | 더 이상 안 쓰는 도구 제거 |
+| `uv tool list` | — | — | 현재 설치된 도구 목록 확인 |
+
+```bash
+# 전형적인 사용 흐름
+
+# 1. "이 도구 뭔지 한번 써볼까?" → uvx (일회성)
+uvx cookiecutter gh:audreyr/cookiecutter-pypackage
+
+# 2. "매일 쓰니까 설치해야겠다" → uv tool install (영구)
+uv tool install ruff
+
+# 3. "새 버전 나왔대" → uv tool upgrade (갱신)
+uv tool upgrade ruff
+
+# 4. "전부 최신으로 맞추자" → --all (일괄 갱신)
+uv tool upgrade --all
+
+# 5. "이제 안 써" → uninstall (삭제)
+uv tool uninstall ruff
+```
+
+> 💡 **핵심**: `uvx`는 "맛보기", `uv tool install`은 "입주", `uv tool upgrade`는 "리모델링"입니다.
+
 ---
 
 ### 7. Workspace (모노레포)
