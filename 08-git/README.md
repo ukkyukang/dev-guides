@@ -120,13 +120,15 @@ Git은 **파일의 변경 이력을 추적하는 분산 버전 관리 시스템*
 
 #### 1.2 Git의 3가지 영역
 
-```
-┌──────────────┐     git add     ┌──────────────┐    git commit    ┌──────────────┐
-│  Working Dir │ ──────────────► │ Staging Area │ ────────────────► │  Repository  │
-│  (작업 디렉토리) │               │  (스테이징)    │                 │  (저장소)      │
-│              │ ◄────────────── │              │                  │              │
-│  파일 수정     │   git restore  │  커밋할 파일    │                  │  커밋 이력     │
-└──────────────┘                └──────────────┘                  └──────────────┘
+```mermaid
+flowchart LR
+    A["Working Dir<br>(작업 디렉토리)<br><br>파일 수정"]
+    B["Staging Area<br>(스테이징)<br><br>커밋할 파일"]
+    C["Repository<br>(저장소)<br><br>커밋 이력"]
+
+    A -- "git add" --> B
+    B -- "git restore --staged" --> A
+    B -- "git commit" --> C
 ```
 
 1. **Working Directory**: 현재 편집 중인 파일들
@@ -162,69 +164,38 @@ git config --list
 
 **이 순서도가 이 강의의 핵심입니다.** 처음부터 태깅까지의 전체 흐름을 외우세요.
 
-```
-                        ┌─────────────────────────────────────────────┐
-                        │         ❶ 프로젝트 시작                       │
-                        │                                              │
-                        │   git init                                   │
-                        │   git add .                                  │
-                        │   git commit -m "Initial commit"             │
-                        │   git remote add origin <URL>                │
-                        │   git push -u origin main                   │
-                        └─────────────────┬───────────────────────────┘
-                                          │
-                        ┌─────────────────▼───────────────────────────┐
-                        │         ❷ 개발 브랜치 생성                     │
-                        │                                              │
-                        │   git checkout -b dev                       │
-                        │   git push -u origin dev                    │
-                        └─────────────────┬───────────────────────────┘
-                                          │
-              ┌───────────────────────────▼───────────────────────────┐
-              │              ❸ 기능 개발 (반복)                         │
-              │                                                        │
-              │   git checkout -b feature/login dev                   │
-              │                                                        │
-              │   ... 코드 작성 ...                                    │
-              │                                                        │
-              │   git add .                                            │
-              │   git commit -m "feat: 로그인 기능 추가"                │
-              │   git push origin feature/login                       │
-              └───────────────────────────┬───────────────────────────┘
-                                          │
-              ┌───────────────────────────▼───────────────────────────┐
-              │              ❹ PR/MR → dev에 머지                      │
-              │                                                        │
-              │   GitHub에서 Pull Request 생성                         │
-              │   feature/login → dev                                 │
-              │                                                        │
-              │   # 또는 로컬에서:                                     │
-              │   git checkout dev                                    │
-              │   git merge feature/login                             │
-              │   git push origin dev                                 │
-              │   git branch -d feature/login   # feature 브랜치 삭제  │
-              └───────────────────────────┬───────────────────────────┘
-                                          │
-                                          │  (❸→❹ 반복...)
-                                          │
-              ┌───────────────────────────▼───────────────────────────┐
-              │              ❺ 릴리스: dev → main 머지                 │
-              │                                                        │
-              │   git checkout main                                   │
-              │   git merge dev                                       │
-              │   git push origin main                                │
-              └───────────────────────────┬───────────────────────────┘
-                                          │
-              ┌───────────────────────────▼───────────────────────────┐
-              │              ❻ 태그 달기 (버전 표시)                    │
-              │                                                        │
-              │   git tag -a v1.0.0 -m "v1.0.0 첫 번째 릴리스"        │
-              │   git push origin v1.0.0                              │
-              └───────────────────────────┬───────────────────────────┘
-                                          │
-                                          ▼
-                                    🎉 릴리스 완료!
-                                   (❸부터 다시 반복)
+```mermaid
+flowchart TD
+    subgraph S1 [1. 프로젝트 시작]
+        A["git init<br>git add .<br>git commit -m 'Initial commit'<br>git push origin main"]
+    end
+
+    subgraph S2 [2. 개발 브랜치 생성]
+        B["git checkout -b dev<br>git push origin dev"]
+    end
+
+    subgraph S3 [3. 기능 개발-반복]
+        C["git checkout -b feature/login dev<br>...코드 작성...<br>git add .<br>git commit -m 'feat: ...'<br>git push origin feature/login"]
+    end
+
+    subgraph S4 [4. 머지]
+        D["feature/login → dev 머지<br>(PR 또는 로컬 merge)"]
+    end
+
+    subgraph S5 [5. 릴리스]
+        E["git checkout main<br>git merge dev<br>git push origin main"]
+    end
+
+    subgraph S6 [6. 태그 달기]
+        F["git tag -a v1.0.0 -m 'v1.0.0'<br>git push origin --tags"]
+    end
+
+    S1 --> S2
+    S2 --> S3
+    S3 --> S4
+    S4 -.->|새로운 기능 개발 시| S3
+    S4 --> S5
+    S5 --> S6
 ```
 
 #### 3.1 요약: 한 줄로 보는 전체 흐름
@@ -235,14 +206,30 @@ init → push main → branch dev → branch feature → commit → merge to dev
 
 #### 3.2 브랜치 구조 시각화
 
-```
-main     ●────────────────────────●──────────────●  (v1.0.0)  ●  (v1.1.0)
-              \                  / \            /
-dev            ●──●──●──●──●──●    ●──●──●──●──●
-                 \      /            \      /
-feature/login     ●──●──●             |    |
-                                      |    |
-feature/signup                        ●──●─●
+```mermaid
+gitGraph
+    commit
+    branch dev
+    checkout dev
+    commit
+    commit
+    branch feature/login
+    checkout feature/login
+    commit
+    commit
+    checkout dev
+    merge feature/login
+    branch feature/signup
+    checkout feature/signup
+    commit
+    checkout dev
+    merge feature/signup
+    checkout main
+    merge dev tag: "v1.0.0"
+    checkout dev
+    commit
+    checkout main
+    merge dev tag: "v1.1.0"
 ```
 
 ---
