@@ -1,0 +1,50 @@
+# Project: [프로젝트명]
+
+## 개요
+[3~5문장으로 프로젝트를 설명하세요]
+예: FastAPI 기반 사내 결제 시스템 백엔드. PostgreSQL(운영), SQLite(테스트) 사용.
+
+## 기술 스택
+- Python 3.12, FastAPI 0.115, SQLAlchemy 2.0 (async)
+- 패키징: uv (pip 사용 금지!)
+- 테스트: pytest + pytest-asyncio
+- 린트: ruff + mypy
+
+## 프로젝트 구조
+```
+src/
+├── api/         # 라우터 (기능별 폴더 분리)
+├── core/        # 설정, 보안, DB 연결
+├── models/      # SQLAlchemy 모델
+├── schemas/     # Pydantic 스키마
+└── services/    # 비즈니스 로직
+tests/
+```
+
+## 코딩 규칙
+- 모든 DB 연산은 async/await 필수
+- 라우터에서 직접 DB 접근 금지 → services 계층 사용
+- 환경변수는 pydantic-settings로만 읽기 (os.environ 금지)
+- 파일 상단에 항상 경로 주석: `# src/api/routes/payments.py`
+
+## 패키지 관리
+- 패키지 추가: `uv add [패키지명]`
+- 실행: `uv run [명령]`
+- pip install 절대 사용 금지
+
+## 테스트 실행
+```bash
+uv run pytest tests/ -v
+uv run pytest tests/test_payments.py -k "test_create" -v
+```
+
+## 브랜치 규칙
+- main: 운영 배포본
+- dev: 통합 테스트 브랜치
+- feature/*: 기능 개발
+- fix/*: 버그 수정
+
+## 주의사항
+- .env 파일 절대 커밋 금지
+- migrations/ 파일은 직접 수정 금지 (alembic 명령으로만)
+- print() 사용 금지, 반드시 structlog 사용

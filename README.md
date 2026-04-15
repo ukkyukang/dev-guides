@@ -19,6 +19,7 @@ Python 기초부터 컨테이너 기반 개발까지, 실무에 바로 적용할
 | 06 | [Docker Compose](./06-docker-compose/README.md) | 다중 컨테이너 애플리케이션 관리 | `compose.yml`, 네트워크, 볼륨 |
 | 07 | [컨테이너 안에서 개발하기](./07-dev-containers/README.md) | 이미지에 의존성을 굽고, 소스를 마운트 | `compose.dev.yml`, 핫 리로드 |
 | 08 | [Git](./08-git/README.md) | 초보자를 위한 Git 실전 가이드 | `git`, 브랜치 전략, 태그 |
+| 09 | [Claude 활용](./09-claude/README.md) | Claude Code, Projects, Sub-agents, Skills | `claude`, `CLAUDE.md`, `.claude/agents/` |
 
 ---
 
@@ -32,12 +33,14 @@ Python 기초부터 컨테이너 기반 개발까지, 실무에 바로 적용할
                                           [07. 컨테이너 안에서 개발하기]
 
 [08. Git] ← 언제든 참고 가능 (독립 모듈)
+[09. Claude 활용] ← AI 코딩 어시스턴트 활용 (독립 모듈)
 ```
 
 - **01~03**: Python 개발의 기초 체력 — 패키지 관리, 패키징, 크로스 플랫폼
 - **04~06**: Docker 기초 — 컨테이너, 이미지 빌드, 다중 서비스
 - **07**: 최종 목표 — 컨테이너 안에서 개발하는 실무 워크플로우
 - **08**: Git — 모든 강의에서 필요한 버전 관리 (독립적으로 학습 가능)
+- **09**: Claude 활용 — AI 코딩 어시스턴트를 실무에 통합 (독립적으로 학습 가능)
 
 ---
 
@@ -68,8 +71,13 @@ dev-guides/
 ├── 07-dev-containers/
 │   ├── README.md
 │   └── examples/                     # 예제 (Streamlit 컨테이너 개발 ⭐)
-└── 08-git/
-    └── README.md                     # 워크플로우 순서도, 30가지 FAQ
+├── 08-git/
+│   └── README.md                     # 워크플로우 순서도, 30가지 FAQ
+└── 09-claude/
+    ├── README.md                     # Claude Code, Projects, Agents, Skills
+    └── examples/
+        ├── 01-project-setup/            # CLAUDE.md 템플릿
+        └── 02-custom-agents/            # 실전 에이전트 파일 예제
 ```
 
 ---

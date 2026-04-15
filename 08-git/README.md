@@ -880,4 +880,6 @@ git filter-repo --path secret.env --invert-paths
 
 이전: [07. 컨테이너 안에서 개발하기 ←](../07-dev-containers/README.md)
 
-🎉 축하합니다! 모든 강의를 완료했습니다. [메인 페이지로 돌아가기 →](../README.md)
+## ⏭️ 다음 강의
+
+[09. Claude 활용 — AI 코딩 어시스턴트 완전 활용 가이드 →](../09-claude/README.md)
