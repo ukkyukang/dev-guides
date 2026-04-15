@@ -1,7 +1,11 @@
 # 03. OS Independent 개발 방법론
 
-> Windows, macOS, Linux 어디서나 동일하게 동작하는 코드를 작성하는 방법을 배웁니다.  
-> 경로 처리, 줄바꿈, 인코딩, 환경 변수 등 실무에서 자주 마주치는 함정을 다룹니다.
+> **"개발은 Windows(WSL)에서, 배포는 Docker(Linux)로"** — 2026년 클라우드 네이티브 개발 표준.  
+> 하지만 Windows와 Linux는 근본이 다릅니다. 이 차이를 무시하면  
+> **"내 윈도우 PC에서는 잘 되는데, 도커 컨테이너만 띄우면 죽어요!"** 라는 악몽이 시작됩니다.  
+>  
+> 이 강의에서는 OS에 종속되지 않는 무결점 코드를 작성하기 위한  
+> **4가지 핵심 요소**와 **현대적 해결책(라이브러리)**을 다룹니다.
 
 ---
 
@@ -9,27 +13,35 @@
 
 - [01. uv](../01-uv/README.md) 강의 완료
 - Python 기본 문법 이해
-- 여러 OS에서 개발한 경험이 있으면 좋음 (필수 아님)
 
 ## 🎯 학습 목표
 
 이 강의를 완료하면 다음을 할 수 있습니다:
 
-1. OS별 주요 차이점을 이해하고 대응 패턴을 적용할 수 있다
-2. `pathlib`을 활용하여 크로스 플랫폼 경로를 처리할 수 있다
-3. 파일 인코딩 문제를 예방하고 해결할 수 있다
-4. 환경 변수와 설정 파일을 OS 독립적으로 관리할 수 있다
-5. 크로스 플랫폼 자동화 스크립트를 작성할 수 있다
+1. OS별 주요 차이점 4가지를 이해하고 대응 패턴을 적용할 수 있다
+2. `pathlib`으로 크로스 플랫폼 경로를 처리할 수 있다
+3. `platformdirs`로 OS별 표준 디렉토리를 자동 매핑할 수 있다
+4. `pydantic-settings`로 환경 변수와 설정을 타입 안전하게 관리할 수 있다
+5. 코드 한 글자 수정 없이 Windows에서도, Docker에서도 동작하는 앱을 만들 수 있다
+
+---
+
+## 📊 모던 파이썬 크로스 플랫폼 라이브러리 요약표
+
+| 라이브러리 | 종류 | 기존 방식 (❌ 레거시) | 모던 방식 (✅ 2026 표준) | 도입 이유 |
+|---|---|---|---|---|
+| **`pathlib`** | 내장 | `os.path.join(a, b)` | `Path(a) / b` | 슬래시 하나로 OS 상관없이 경로 결합 |
+| **`platformdirs`** | 외부 | `C:\\temp\\log` 하드코딩 | `user_log_dir("MyApp")` | OS별 표준 디렉토리 자동 매핑 |
+| **`pydantic-settings`** | 외부 | `os.environ.get("PORT")` | `Settings()` 클래스 | `.env` 자동 로드 + 타입 검증 |
+| **`shutil`** | 내장 | `os.system("dir")` | `shutil.which("git")` | 실행 파일 존재 여부 안전 확인 |
 
 ---
 
 ## 📖 본문
 
-### 1. OS별 주요 차이점
+### 1. 파일 경로와 구분자 — `pathlib` (내장)
 
-개발을 하다 보면 "내 컴퓨터에서는 되는데..."라는 말을 자주 듣게 됩니다. 대부분 아래 차이점 때문입니다.
-
-#### 1.1 경로 구분자
+Windows와 Linux/macOS의 가장 근본적인 차이입니다.
 
 | OS | 경로 구분자 | 예시 |
 |----|-----------|------|
@@ -37,127 +49,21 @@
 | macOS/Linux | `/` (슬래시) | `/home/dev/project` |
 
 ```python
-# ❌ 하드코딩된 경로 — Windows에서만 동작
+# ❌ 레거시 — os.path (2026년 기준 구시대의 유물)
+import os
+path = os.path.join("src", "my_package", "config.json")
+
+# ❌ 최악 — 하드코딩 (Windows에서만 동작)
 path = "src\\my_package\\config.json"
 
-# ❌ 하드코딩된 경로 — Unix에서만 동작
-path = "src/my_package/config.json"
-
-# ✅ OS 독립적 — 어디서나 동작
+# ✅ 모던 — pathlib.Path (2026 표준)
 from pathlib import Path
 path = Path("src") / "my_package" / "config.json"
+# Windows: src\my_package\config.json
+# Linux:   src/my_package/config.json
 ```
 
-#### 1.2 줄바꿈 문자
-
-| OS | 줄바꿈 | 표현 |
-|----|--------|------|
-| Windows | CRLF | `\r\n` |
-| macOS/Linux | LF | `\n` |
-
-```python
-# ❌ 문제 발생 가능
-with open("data.txt", "r") as f:
-    content = f.read()
-    # Windows에서 \r\n이 남아있을 수 있음
-
-# ✅ newline 파라미터로 제어
-with open("data.txt", "r", newline="") as f:
-    content = f.read()
-    # 줄바꿈을 있는 그대로 읽음
-
-# ✅ 또는 splitlines()으로 OS 독립적 파싱
-lines = content.splitlines()  # \n, \r\n, \r 모두 처리
-```
-
-> 💡 **`.gitattributes`로 해결하기**: Git에서 자동 변환을 설정하세요:
-> ```
-> # .gitattributes
-> * text=auto eol=lf
-> *.bat text eol=crlf
-> *.ps1 text eol=crlf
-> ```
-
-#### 1.3 파일 인코딩
-
-| OS | 기본 인코딩 |
-|----|-----------|
-| Windows (한국어) | `cp949` (EUC-KR) |
-| macOS/Linux | `UTF-8` |
-
-```python
-# ❌ Windows에서 한글 파일을 읽을 때 깨질 수 있음
-with open("data.txt") as f:
-    content = f.read()  # 시스템 기본 인코딩 사용
-
-# ✅ 항상 인코딩을 명시
-with open("data.txt", encoding="utf-8") as f:
-    content = f.read()
-```
-
-> 💡 **Python 3.15+**: UTF-8이 기본 인코딩이 될 예정입니다 (PEP 686).
-> 그 전까지는 반드시 `encoding="utf-8"`을 명시하세요.
-
-#### 1.4 대소문자 민감도
-
-| OS | 파일 시스템 대소문자 |
-|----|-------------------|
-| Windows | 대소문자 무시 (`File.txt` == `file.txt`) |
-| macOS (기본) | 대소문자 무시 (APFS 기본 설정) |
-| Linux | 대소문자 구분 (`File.txt` ≠ `file.txt`) |
-
-```python
-# ❌ macOS/Windows에서는 동작하지만 Linux CI/CD에서 실패
-from MyPackage import utils  # 실제 디렉토리는 mypackage
-
-# ✅ 항상 정확한 대소문자 사용
-from mypackage import utils
-```
-
-#### 1.5 환경 변수
-
-```python
-import os
-
-# 경로 리스트 구분자
-# Windows: PATH = "C:\Python;C:\Tools"     (세미콜론)
-# Unix:    PATH = "/usr/bin:/usr/local/bin" (콜론)
-path_sep = os.pathsep  # Windows: ";", Unix: ":"
-
-# 홈 디렉토리
-home = Path.home()  # 모든 OS에서 작동
-
-# 임시 디렉토리
-import tempfile
-tmp = Path(tempfile.gettempdir())  # 모든 OS에서 작동
-```
-
----
-
-### 2. `pathlib` — 경로 처리의 정석
-
-`pathlib`은 Python 3.4에서 도입된 객체 지향 파일 시스템 경로 라이브러리입니다.
-**2026년 기준, 모든 새 코드에서 `os.path` 대신 `pathlib`을 사용해야 합니다.**
-
-#### 2.1 기본 사용법
-
-```python
-from pathlib import Path
-
-# 경로 생성
-project_root = Path(__file__).parent.parent   # 현재 파일 기준 상대 경로
-config_path = project_root / "config" / "settings.json"  # / 연산자로 결합
-
-# 경로 정보
-print(config_path.name)        # "settings.json"
-print(config_path.stem)        # "settings"
-print(config_path.suffix)      # ".json"
-print(config_path.parent)      # .../config
-print(config_path.parts)       # ('...', 'config', 'settings.json')
-print(config_path.is_absolute())  # True/False
-```
-
-#### 2.2 `os.path` → `pathlib` 변환 가이드
+#### 1.1 `os.path` → `pathlib` 변환 가이드
 
 | `os.path` (레거시) | `pathlib` (현대적) |
 |--------------------|--------------------|
@@ -174,7 +80,7 @@ print(config_path.is_absolute())  # True/False
 | `os.listdir(path)` | `path.iterdir()` |
 | `os.walk(path)` | `path.rglob("*")` |
 
-#### 2.3 파일 읽기/쓰기
+#### 1.2 파일 읽기/쓰기
 
 ```python
 from pathlib import Path
@@ -183,174 +89,298 @@ path = Path("data.txt")
 
 # 쓰기
 path.write_text("안녕하세요", encoding="utf-8")
-path.write_bytes(b"\x89PNG...")
 
 # 읽기
 text = path.read_text(encoding="utf-8")
-data = path.read_bytes()
 ```
 
-#### 2.4 디렉토리 탐색
+#### 1.3 디렉토리 생성 및 탐색
 
 ```python
 from pathlib import Path
 
-project = Path(".")
-
-# 현재 디렉토리의 파일만
-for f in project.iterdir():
-    print(f.name)
-
-# 특정 패턴의 파일 (현재 디렉토리만)
-for f in project.glob("*.py"):
-    print(f)
-
-# 재귀적으로 모든 하위 디렉토리 포함
-for f in project.rglob("*.py"):
-    print(f)
-
-# 특정 패턴 매칭
-for f in project.rglob("test_*.py"):
-    print(f)
-```
-
-#### 2.5 디렉토리/파일 생성
-
-```python
-from pathlib import Path
-
-# 디렉토리 생성 (부모 디렉토리도 함께, 이미 존재해도 에러 없음)
+# 디렉토리 생성 (부모까지 한 번에, 이미 있어도 에러 없음)
 output_dir = Path("output") / "reports" / "2026"
 output_dir.mkdir(parents=True, exist_ok=True)
 
-# 파일 생성
-(output_dir / "report.txt").write_text("보고서 내용", encoding="utf-8")
+# 재귀적 파일 탐색
+for f in Path(".").rglob("*.py"):
+    print(f)
 ```
 
 ---
 
-### 3. 환경 변수와 설정 관리
+### 2. OS별 시스템 폴더 위치 — `platformdirs` (외부)
 
-#### 3.1 환경 변수 읽기
+앱이 로그/캐시/데이터를 저장해야 할 때, **절대로 경로를 하드코딩하지 마세요.**
 
 ```python
-import os
-
-# 기본값 포함 읽기
-db_host = os.environ.get("DB_HOST", "localhost")
-db_port = int(os.environ.get("DB_PORT", "5432"))
-debug = os.environ.get("DEBUG", "false").lower() == "true"
+# ❌ 하드코딩 — 다른 OS에서 권한 오류(Permission Denied)로 뻗어버림
+log_path = Path("C:\\temp\\my-app\\log")       # Windows에서만 동작
+log_path = Path("/tmp/my-app/log")             # Linux에서만 동작
 ```
 
-#### 3.2 `.env` 파일 활용
+`platformdirs`에 **앱 이름만 알려주면**, 각 OS의 표준 규약에 맞는 안전한 폴더를 자동으로 찾아줍니다.
 
 ```bash
-# .env 파일 (Git에 커밋하지 마세요!)
-DB_HOST=localhost
-DB_PORT=5432
-DEBUG=true
-SECRET_KEY=your-secret-key
+uv add platformdirs
 ```
+
+#### 2.1 4가지 핵심 디렉토리
 
 ```python
-# python-dotenv 사용
-# uv add python-dotenv
-from dotenv import load_dotenv
-import os
+from platformdirs import user_config_dir, user_data_dir, user_cache_dir, user_log_dir
 
-load_dotenv()  # .env 파일을 환경 변수로 로드
+app_name = "MyApp"
 
-db_host = os.environ.get("DB_HOST", "localhost")
+# 1. Config — 설정 파일 (settings.json 등)
+config = user_config_dir(app_name)
+# Windows:  C:\Users\user\AppData\Local\MyApp
+# macOS:    ~/Library/Application Support/MyApp
+# Linux:    ~/.config/MyApp
+
+# 2. Data — 앱 데이터 (DB, 사용자 파일 등)
+data = user_data_dir(app_name)
+# Windows:  C:\Users\user\AppData\Local\MyApp
+# macOS:    ~/Library/Application Support/MyApp
+# Linux:    ~/.local/share/MyApp
+
+# 3. Cache — 캐시 (지워져도 괜찮은 임시 데이터)
+cache = user_cache_dir(app_name)
+# Windows:  C:\Users\user\AppData\Local\MyApp\Cache
+# macOS:    ~/Library/Caches/MyApp
+# Linux:    ~/.cache/MyApp
+
+# 4. Log — 로그 파일
+log = user_log_dir(app_name)
+# Windows:  C:\Users\user\AppData\Local\MyApp\Log
+# macOS:    ~/Library/Logs/MyApp
+# Linux:    ~/.local/state/MyApp/log
 ```
 
-#### 3.3 OS별 설정 파일 위치
+#### 2.2 실전 사용 패턴
 
 ```python
 from pathlib import Path
-import platform
+from platformdirs import user_log_dir, user_data_dir
 
-def get_config_dir(app_name: str) -> Path:
-    """OS에 맞는 설정 파일 디렉토리를 반환합니다."""
-    system = platform.system()
-    
-    if system == "Windows":
-        base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-    elif system == "Darwin":  # macOS
-        base = Path.home() / "Library" / "Application Support"
-    else:  # Linux
-        base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
-    
-    config_dir = base / app_name
-    config_dir.mkdir(parents=True, exist_ok=True)
-    return config_dir
+app_name = "MyApp"
 
-# 사용
-config = get_config_dir("my-app")
-# Windows: C:\Users\user\AppData\Roaming\my-app
-# macOS:   /Users/user/Library/Application Support/my-app
-# Linux:   /home/user/.config/my-app
+# 로그 디렉토리 생성 + 로그 기록
+log_dir = Path(user_log_dir(app_name))
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / "app.log"
+
+# UTF-8로 명시적 기록 (인코딩 방어)
+with log_file.open("a", encoding="utf-8") as f:
+    f.write("✅ 앱이 정상 시작되었습니다\n")
+
+print(f"📂 로그 저장 위치: {log_file}")
+# Windows 개발자: C:\Users\...\AppData\Local\MyApp\Log\app.log
+# Docker(Linux):  ~/.local/state/MyApp/log/app.log
 ```
 
-> 💡 **팁**: [`platformdirs`](https://pypi.org/project/platformdirs/) 라이브러리를 사용하면 위 코드를 직접 작성할 필요가 없습니다:
-> ```python
-> from platformdirs import user_config_dir
-> config_path = Path(user_config_dir("my-app"))
-> ```
+> 💡 **핵심**: 코드 한 글자 수정 없이, Windows에서도 Docker에서도 각 OS의 표준 경로에 자동 저장됩니다.
 
 ---
 
-### 4. 프로세스 실행
+### 3. 환경 변수와 설정 관리 — `pydantic-settings` (외부)
 
-#### 4.1 `subprocess` 크로스 플랫폼 사용
+기존 `os.environ.get()`의 문제점:
+- 타입이 항상 `str` — `"8080"`을 `int`로 변환 잊으면 런타임 에러
+- 필수 변수 누락을 컴파일 타임에 잡을 수 없음
+- `.env` 파일과 시스템 환경 변수를 수동으로 합쳐야 함
+
+```bash
+uv add pydantic-settings
+```
+
+#### 3.1 기본 사용법
 
 ```python
-import subprocess
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class AppSettings(BaseSettings):
+    """앱 설정 — .env 파일과 환경 변수를 자동으로 읽습니다."""
+
+    app_name: str = "MyApp"
+    debug: bool = False           # "true" → True 자동 변환
+    port: int = 8080              # "8080" → 8080 자동 변환
+    database_url: str = "sqlite:///data.db"
+    secret_key: str              # 기본값 없음 → 필수 변수!
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",           # 정의하지 않은 변수는 무시
+    )
+```
+
+```bash
+# .env 파일 (Git에 커밋하지 마세요!)
+APP_NAME=내프로젝트
+DEBUG=true
+PORT=3000
+DATABASE_URL=postgresql://user:pass@localhost/mydb
+SECRET_KEY=super-secret-key-12345
+```
+
+```python
+# 사용
+settings = AppSettings()
+
+print(settings.app_name)      # "내프로젝트" (str)
+print(settings.debug)          # True (bool — 자동 변환!)
+print(settings.port)           # 3000 (int — 자동 변환!)
+print(settings.database_url)   # "postgresql://..." (str)
+```
+
+#### 3.2 우선순위
+
+`pydantic-settings`는 아래 순서로 설정을 읽습니다 (위가 우선):
+
+1. **시스템 환경 변수** (Docker `ENV`, `export`)
+2. **`.env` 파일**
+3. **클래스의 기본값**
+
+```bash
+# Docker에서 환경 변수를 주입하면 .env보다 우선
+docker run -e PORT=9090 my-app
+# → settings.port = 9090 (환경 변수가 .env의 3000을 덮어씀)
+```
+
+#### 3.3 vs 기존 방식 비교
+
+```python
+# ❌ 레거시 — os.environ
+import os
+port = int(os.environ.get("PORT", "8080"))      # 수동 타입 변환
+debug = os.environ.get("DEBUG") == "true"        # 수동 bool 변환
+secret = os.environ.get("SECRET_KEY")            # None 체크 누락 위험
+if secret is None:
+    raise ValueError("SECRET_KEY 필수!")         # 런타임에야 발견
+
+# ✅ 모던 — pydantic-settings
+settings = AppSettings()                          # 모든 것이 자동!
+# - 타입 변환 자동
+# - 필수 변수 누락 시 즉시 ValidationError
+# - .env 파일 자동 로드
+```
+
+---
+
+### 4. 문자열 인코딩 — 한국어 Windows의 저주
+
+한국어 Windows의 기본 텍스트 인코딩은 `CP949`(EUC-KR)입니다.
+
+```python
+# ❌ Windows에서 아무 생각 없이 쓰면...
+with open("test.txt", "w") as f:
+    f.write("안녕하세요")
+# → CP949로 저장됨 → Docker(UTF-8)에서 읽으면 "뷃셣"
+
+# ✅ 반드시 UTF-8을 명시!
+with open("test.txt", "w", encoding="utf-8") as f:
+    f.write("안녕하세요")
+
+# ✅ pathlib으로 더 깔끔하게
+from pathlib import Path
+Path("test.txt").write_text("안녕하세요", encoding="utf-8")
+```
+
+#### 4.1 줄바꿈 문자
+
+| OS | 줄바꿈 | 표현 |
+|----|--------|------|
+| Windows | CRLF | `\r\n` |
+| macOS/Linux | LF | `\n` |
+
+```python
+# OS 독립적 줄 파싱
+content = Path("data.txt").read_text(encoding="utf-8")
+lines = content.splitlines()  # \n, \r\n, \r 모두 처리
+```
+
+#### 4.2 `.gitattributes`로 줄바꿈 통일
+
+팀 전체에서 일관된 줄바꿈을 보장합니다:
+
+```gitattributes
+# 모든 텍스트 파일을 LF로 정규화
+* text=auto eol=lf
+
+# Windows 전용 스크립트만 CRLF 유지
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 바이너리 파일
+*.png binary
+*.jpg binary
+*.woff2 binary
+```
+
+#### 4.3 macOS 한글 파일명 문제
+
+macOS의 APFS는 유니코드 NFD를 사용하여 한글을 분해 저장합니다:
+
+```python
+import unicodedata
+
+# macOS에서 읽은 파일명을 NFC로 정규화
+filename = unicodedata.normalize("NFC", raw_filename)
+```
+
+---
+
+### 5. 시스템 명령어 탐색 — `shutil.which()` (내장)
+
+```python
 import shutil
 
-# ❌ 셸 명령어 직접 사용 — OS마다 다름
-subprocess.run("ls -la", shell=True)          # Linux/macOS만
-subprocess.run("dir", shell=True)             # Windows만
+# ❌ OS별 명령어 직접 실행
+import os
+os.system("ls")       # Linux에서만
+os.system("dir")      # Windows에서만
 
-# ✅ 리스트 형태로 실행 — 셸 의존 없음
-subprocess.run(["python", "-m", "pytest"], check=True)
+# ✅ 명령어 존재 여부를 안전하게 확인
+git = shutil.which("git")
+docker = shutil.which("docker")
 
-# ✅ 실행 파일 존재 확인
-if shutil.which("git"):
-    subprocess.run(["git", "status"], check=True)
+if git:
+    print(f"✅ git 발견: {git}")
 else:
-    print("git이 설치되어 있지 않습니다")
-```
+    print("❌ git이 설치되어 있지 않습니다")
 
-#### 4.2 셸 스크립트 대안
-
-```python
-import sys
-import platform
-
-def get_python_executable() -> str:
-    """현재 Python 실행 파일 경로를 반환합니다."""
-    return sys.executable
-
-def is_windows() -> bool:
-    """Windows OS인지 확인합니다."""
-    return platform.system() == "Windows"
-
-def is_macos() -> bool:
-    """macOS인지 확인합니다."""
-    return platform.system() == "Darwin"
-
-def is_linux() -> bool:
-    """Linux인지 확인합니다."""
-    return platform.system() == "Linux"
+# subprocess도 리스트 형태로 (shell=True 사용 금지!)
+import subprocess
+subprocess.run(["python", "-m", "pytest"], check=True)
 ```
 
 ---
 
-### 5. 크로스 플랫폼 자동화
+### 6. 대소문자 민감도
 
-#### 5.1 `pyproject.toml` 스크립트 (uv 활용)
+| OS | 파일 시스템 |
+|----|-----------|
+| Windows | 대소문자 무시 (`File.txt` == `file.txt`) |
+| macOS (기본) | 대소문자 무시 (APFS 기본) |
+| Linux / Docker | 대소문자 **구분** (`File.txt` ≠ `file.txt`) |
 
-개발 작업을 `pyproject.toml`의 스크립트로 정의하면 어떤 OS에서든 동일하게 실행됩니다:
+```python
+# ❌ macOS/Windows에서는 되지만 Docker(Linux)에서 ImportError
+from MyPackage import utils  # 실제 디렉토리는 mypackage
+
+# ✅ 항상 정확한 대소문자 사용
+from mypackage import utils
+```
+
+---
+
+### 7. 크로스 플랫폼 자동화
+
+#### 7.1 `pyproject.toml` 스크립트
 
 ```toml
 [project.scripts]
@@ -361,200 +391,82 @@ dev = "my_app.cli:dev_server"
 # 어떤 OS에서든 동일
 uv run dev
 uv run -m pytest
-uv run -m mypy src/
 ```
 
-#### 5.2 Makefile vs Taskfile
+#### 7.2 Python 스크립트 (가장 확실한 방법)
 
-**Makefile** (Linux/macOS에서 주로 사용):
-
-```makefile
-.PHONY: test lint format
-
-test:
-	uv run pytest
-
-lint:
-	uv run ruff check src/
-
-format:
-	uv run ruff format src/
-```
-
-> ⚠️ Makefile은 Windows에서 `make`를 별도 설치해야 합니다.
-
-**[Taskfile](https://taskfile.dev/)** (크로스 플랫폼 권장 ✅):
-
-```yaml
-# Taskfile.yml
-version: '3'
-
-tasks:
-  test:
-    desc: "테스트 실행"
-    cmds:
-      - uv run pytest
-
-  lint:
-    desc: "린트 검사"
-    cmds:
-      - uv run ruff check src/
-
-  format:
-    desc: "코드 포맷팅"
-    cmds:
-      - uv run ruff format src/
-
-  all:
-    desc: "전체 검사"
-    deps: [lint, test]
-```
-
-```bash
-# 어떤 OS에서든 동일
-task test
-task lint
-task all
-```
-
-#### 5.3 Python 스크립트로 자동화 (가장 확실한 방법)
+Makefile은 Windows에서 `make`를 설치해야 합니다. Python 스크립트가 가장 확실합니다:
 
 ```python
 #!/usr/bin/env python3
-"""dev.py — 크로스 플랫폼 개발 스크립트."""
+"""dev.py — 크로스 플랫폼 개발 자동화."""
+import subprocess, sys
 
-import subprocess
-import sys
-
-
-def run(cmd: list[str]) -> None:
-    """명령어를 실행하고 실패 시 종료합니다."""
+def run(cmd):
     print(f"▶ {' '.join(cmd)}")
-    result = subprocess.run(cmd)
-    if result.returncode != 0:
-        sys.exit(result.returncode)
+    subprocess.run(cmd, check=True)
 
-
-def test():
-    run([sys.executable, "-m", "pytest", "-v"])
-
-
-def lint():
-    run([sys.executable, "-m", "ruff", "check", "src/"])
-
-
-def format_code():
-    run([sys.executable, "-m", "ruff", "format", "src/"])
-
+commands = {
+    "test":   lambda: run([sys.executable, "-m", "pytest", "-v"]),
+    "lint":   lambda: run([sys.executable, "-m", "ruff", "check", "src/"]),
+    "format": lambda: run([sys.executable, "-m", "ruff", "format", "src/"]),
+}
 
 if __name__ == "__main__":
-    commands = {
-        "test": test,
-        "lint": lint,
-        "format": format_code,
-    }
-
-    if len(sys.argv) < 2 or sys.argv[1] not in commands:
+    cmd = sys.argv[1] if len(sys.argv) > 1 else None
+    if cmd not in commands:
         print(f"사용법: python dev.py [{' | '.join(commands)}]")
         sys.exit(1)
-
-    commands[sys.argv[1]]()
+    commands[cmd]()
 ```
 
 ---
 
-### 6. `.gitattributes` 설정
-
-팀 전체에서 일관된 줄바꿈과 인코딩을 보장합니다:
-
-```gitattributes
-# 모든 텍스트 파일의 줄바꿈을 LF로 정규화
-* text=auto eol=lf
-
-# Windows 전용 파일은 CRLF 유지
-*.bat text eol=crlf
-*.cmd text eol=crlf
-*.ps1 text eol=crlf
-
-# 바이너리 파일 자동 감지
-*.png binary
-*.jpg binary
-*.ico binary
-*.woff2 binary
-```
-
----
-
-### 7. 실전 체크리스트
+### 8. 실전 체크리스트
 
 프로젝트가 크로스 플랫폼에서 올바르게 동작하는지 확인하세요:
 
-- [ ] 모든 경로가 `pathlib.Path`를 사용하고 있는가?
+- [ ] 모든 경로가 `pathlib.Path`를 사용하는가?
 - [ ] 파일 읽기/쓰기에 `encoding="utf-8"`을 명시했는가?
-- [ ] `.gitattributes`에서 줄바꿈 정규화를 설정했는가?
+- [ ] 로그/캐시/데이터 경로에 `platformdirs`를 사용하는가?
+- [ ] 환경 변수를 `pydantic-settings`로 관리하는가?
+- [ ] `.gitattributes`에서 줄바꿈 정규화가 설정되어 있는가?
 - [ ] 하드코딩된 OS 전용 경로(`C:\...`, `/home/...`)가 없는가?
 - [ ] `subprocess` 호출이 리스트 형태인가 (`shell=True` 미사용)?
 - [ ] import 경로의 대소문자가 실제 디렉토리와 일치하는가?
-- [ ] 임시 파일/디렉토리에 `tempfile` 모듈을 사용하는가?
 
 ---
 
 ## ❓ 자주 묻는 질문 (FAQ)
 
-### Q1: `os.path`와 `pathlib` 중 어떤 것을 써야 하나요?
+### Q1: `os.path`는 완전히 쓰지 말아야 하나요?
 
-**A**: **`pathlib`을 사용하세요.** `os.path`는 레거시 코드에서만 유지합니다. 모든 표준 라이브러리와 주요 프레임워크가 `pathlib.Path`를 지원합니다. `Path` 객체는 `str(path)`로 언제든 문자열로 변환 가능합니다.
+**A**: **새 코드에서는 `pathlib`만 사용하세요.** `os.path`는 레거시입니다. 모든 표준 라이브러리와 프레임워크가 `pathlib.Path`를 지원합니다. 문자열이 필요한 경우 `str(path)`로 변환 가능합니다.
 
-### Q2: Windows에서 경로가 260자 제한에 걸립니다
+### Q2: `platformdirs`의 config와 data 경로가 Windows에서 같은데요?
 
-**A**: Windows 10 이상에서는 레지스트리 설정으로 긴 경로를 활성화할 수 있습니다:
-```
-HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled = 1
-```
-또는 Python에서: `Path("\\\\?\\C:\\very\\long\\path\\...")`
+**A**: 맞습니다. Windows는 `AppData\Local`에 통합 저장하는 것이 관례입니다. Linux에서는 `~/.config` (config)와 `~/.local/share` (data)로 분리됩니다. `platformdirs`가 각 OS의 관례를 자동으로 따릅니다.
 
-### Q3: `open()` 함수에서 `encoding` 파라미터를 항상 써야 하나요?
+### Q3: `pydantic-settings`에서 `.env` 파일이 없으면 에러가 나나요?
 
-**A**: **네.** Python 3.14 이전까지는 Windows에서 `open()`의 기본 인코딩이 `cp949`(한국어) 또는 시스템 로캘을 따릅니다. UTF-8이 아닌 인코딩에서 한글 파일이 깨질 수 있습니다.
+**A**: 아닙니다. `env_file=".env"`로 설정해도 파일이 없으면 조용히 무시합니다. 시스템 환경 변수나 기본값만 사용됩니다.
 
-```python
-# 반드시 이렇게!
-with open("file.txt", encoding="utf-8") as f:
-    ...
-```
+### Q4: Docker에서 환경 변수와 `.env` 파일 중 뭐가 우선인가요?
 
-### Q4: macOS에서 파일 이름의 한글이 깨지는 문제가 있습니다
+**A**: **시스템 환경 변수(`docker run -e`)가 `.env` 파일보다 우선**합니다. 이는 Docker 운영 시 `.env` 기본값을 환경 변수로 덮어쓸 수 있어 매우 유용합니다.
 
-**A**: macOS의 APFS/HFS+는 유니코드 NFD(Normalization Form Decomposition)를 사용합니다. `ㅎ + ㅏ + ㄴ`처럼 글자를 분해하여 저장합니다.
+### Q5: `open()` 함수에서 `encoding` 파라미터를 항상 써야 하나요?
 
-```python
-import unicodedata
+**A**: **네.** Python 3.14 이전까지 Windows에서 `open()`의 기본 인코딩이 시스템 로캘(한국어: CP949)을 따릅니다. Docker는 UTF-8이므로 반드시 명시하세요.
 
-# macOS에서 읽은 파일명을 NFC로 정규화
-filename = unicodedata.normalize("NFC", raw_filename)
-```
+### Q6: CI/CD에서 여러 OS를 동시에 테스트하려면?
 
-### Q5: CI/CD에서 Linux를 쓰는데, 로컬은 Windows/macOS입니다. 어떻게 테스트하나요?
-
-**A**: 여러 전략이 있습니다:
-1. **Docker**: 로컬에서 Linux 컨테이너로 테스트 (강의 05~07 참고)
-2. **GitHub Actions의 `matrix`**: 여러 OS에서 동시 테스트
-   ```yaml
-   strategy:
-     matrix:
-       os: [ubuntu-latest, windows-latest, macos-latest]
-   ```
-3. **WSL**: Windows에서 Linux 환경 사용
-
-### Q6: `shutil.which()`가 무엇인가요?
-
-**A**: 시스템 PATH에서 실행 파일을 찾는 크로스 플랫폼 함수입니다. Windows에서는 `.exe`, `.bat` 등의 확장자도 자동 검색합니다.
-
-```python
-import shutil
-
-git = shutil.which("git")       # "/usr/bin/git" 또는 "C:\Program Files\Git\cmd\git.exe"
-node = shutil.which("node")     # None (미설치 시)
+**A**: GitHub Actions의 `matrix`:
+```yaml
+strategy:
+  matrix:
+    os: [ubuntu-latest, windows-latest, macos-latest]
+runs-on: ${{ matrix.os }}
 ```
 
 ---
@@ -563,18 +475,18 @@ node = shutil.which("node")     # None (미설치 시)
 
 | 예제 | 설명 | 핵심 학습 |
 |------|------|----------|
-| [01-path-handling](./examples/01-path-handling/) | pathlib 기반 크로스 플랫폼 경로 처리 | Path, 인코딩, 파일 I/O |
-| [02-cross-platform-script](./examples/02-cross-platform-script/) | 크로스 플랫폼 자동화 스크립트 | subprocess, Taskfile |
+| [01-path-handling](./examples/01-path-handling/) | pathlib 기반 경로 처리 | Path, 인코딩, 파일 I/O |
+| [02-cross-platform-script](./examples/02-cross-platform-script/) | 자동화 스크립트 | subprocess, Taskfile |
+| [03-cross-platform-demo](./examples/03-cross-platform-demo/) | **Streamlit 데모 앱 ⭐** | pathlib + platformdirs + pydantic-settings 통합 |
 
 ---
 
 ## 🔗 참고 자료
 
 - [pathlib 공식 문서](https://docs.python.org/3/library/pathlib.html)
-- [PEP 428 — pathlib 도입](https://peps.python.org/pep-0428/)
-- [PEP 686 — UTF-8 기본 인코딩](https://peps.python.org/pep-0686/)
-- [Taskfile 공식 문서](https://taskfile.dev/)
 - [platformdirs 라이브러리](https://pypi.org/project/platformdirs/)
+- [pydantic-settings 공식 문서](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)
+- [PEP 686 — UTF-8 기본 인코딩](https://peps.python.org/pep-0686/)
 
 ---
 
