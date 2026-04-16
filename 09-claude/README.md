@@ -312,7 +312,7 @@ echo "CLAUDE.local.md" >> .gitignore
 
 ### 3.3 실전 CLAUDE.md 템플릿 (Python 프로젝트)
 
-```markdown
+````markdown
 # Project: [프로젝트명]
 
 ## 개요
@@ -354,7 +354,7 @@ uv run pytest tests/test_payments.py -k "test_create" -v  # 특정 테스트만
 
 ## 브랜치 규칙 (08-git 참고)
 - main: 운영 배포본
-- dev: 통합 테스트 브랜치  
+- dev: 통합 테스트 브랜치
 - feature/*: 기능 개발
 - fix/*: 버그 수정
 
@@ -362,7 +362,7 @@ uv run pytest tests/test_payments.py -k "test_create" -v  # 특정 테스트만
 - .env 파일 절대 커밋 금지
 - migrations/ 파일은 직접 수정 금지 (alembic 명령으로만)
 - 절대로 print() 사용 금지, 반드시 structlog 사용
-```
+````
 
 ---
 
